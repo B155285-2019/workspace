@@ -1,0 +1,26 @@
+########################################
+# Program: patmatmotifs
+# Rundate: Tue 29 Oct 2019 18:29:37
+# Commandline: patmatmotifs
+#    -full
+#    -sformat fasta
+#    [-sequence] aves_acc.fasta
+#    -outfile all.patmatmotifs
+# Report_format: dbmotif
+# Report_file: all.patmatmotifs
+########################################
+
+#=======================================
+#
+# Sequence: XP_030921395.1     from: 1   to: 544
+# HitCount: 0
+#
+# Full: Yes
+# Prune: Yes
+# Data_file: /localdisk/software/EMBOSS-6.6.0/share/EMBOSS/data/PROSITE/prosite.lines
+#
+#=======================================
+
+
+#---------------------------------------
+#---------------------------------------
