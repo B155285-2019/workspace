@@ -18,8 +18,8 @@ def check_both_input(name,protein):
 
 
 def check_input(name):
-	valid = re.compile("[A-Za-z0-9- ]+") 
-	if name.isdigit() == True or valid.fullmatch(name) == None:
+	valid = re.compile("[A-Za-z0-9- ]+")
+	if name.isdigit() == True or valid.fullmatch(name) == None or re.search(r'^[\s\n\t]', name):
 		print("The name "+name+" is invalid. Special characters in name or name with only numbers are not welcomed!")
 		return 0
 	if check_valid(name) != 1:
