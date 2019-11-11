@@ -65,12 +65,14 @@ def begin():
 #        seq.strip()
 #        organism[seq] = 1
 reply, name, protein = begin()
-while re.search('[YES][Y]',reply):
+while not (re.search('[YES]|[Y]',reply)):
 	print("We are going back to the beginning!")
-	
+	rename = name.replace(" ","_")
+	reprotein = protein.replace(" ","_")
+	os.remove("{0}_seq_species_{1}.txt".format(reprotein, rename))
 	reply, name, protein = begin()
 	
 print("All sequences are being downloaded...")
 rename = name.replace(" ","_")
 reprotein = protein.replace(" ","_")
-subprocess.call('esearch -db protein -query "{0}{prot} NOT PARTIAL" -organism "{1}" | efetch -db protein -format fasta > {2}_{3}.fasta'.format(protein, name, reprotein, rename), shell=True)
+subprocess.call('esearch -db protein -query "{0}[prot] NOT PARTIAL" -organism "{1}" | efetch -db protein -format fasta > {2}_{3}.fasta'.format(protein, name, reprotein, rename), shell=True)
