@@ -58,8 +58,8 @@ def begin():
 		name, protein = get_input()
 	rename = name.replace(" ","_")
 	reprotein = protein.replace(" ","_")
-	subprocess.call('esearch -db protein -query "{0}[prot] NOT PARTIAL" -organism "{1}" | efetch -db protein -format docsum | xtract -pattern DocumentSummary -element Organism > {2}_organism_list_{3}.txt'.format(protein, name, rename,reprotein), shell=True)
-	my_list = open('{0}_organism_list_{1}.txt'.format(rename, reprotein)).readlines()
+	subprocess.call('esearch -db protein -query "{0}[prot] NOT PARTIAL" -organism "{1}" | efetch -db protein -format docsum | xtract -pattern DocumentSummary -element Organism > {2}_{3}_organism_list.txt'.format(protein, name, rename,reprotein), shell=True)
+	my_list = open('{0}_{1}_organism_list.txt'.format(rename, reprotein)).readlines()
 	count = len(my_list)
 	species = len(set(my_list))
 	print('The search with your input resulted in '+str(count)+' sequences from '+str(species)+' species.\n')
@@ -83,7 +83,7 @@ while not (re.search('[YES]|[Y]',reply)):
 	print("We are going back to the beginning!")
 	rename = name.replace(" ","_")
 	reprotein = protein.replace(" ","_")
-	os.remove("{0}_organism_list_{1}.txt".format(rename, reprotein))
+	os.remove("{0}_{1}_organism_list.txt".format(rename, reprotein))
 	reply, name, protein = begin()
 	
 print("All sequences are being downloaded...")
@@ -94,5 +94,10 @@ subprocess.call('clustalo -i {0}_{1}.fasta -o {0}_{1}_aln.fasta -v'.format(renam
 print("Multiple Alignment for downloaded protein sequences is done")
 subprocess.call('cons -sequence {0}_{1}_aln.fasta -outseq {0}_{1}_consensus.fasta -auto'.format(rename, reprotein), shell=True)
 print("Program has created a consensus sequence from a multiple alignment")
+
+subprocess.call('makeblastdb -in {0}_{1}.fasta -dbtype prot -out {0}_{1}_db'. format(rename, reprotein), shell=True)
+print("From all fasta sequences the program created database for blast alingment\n")
+subprocess.call('blastp -db {0}_{1}_db -query {0}_{1}_consensus.fasta -outfmt 7 -max_hsps 1 > {0}_{1}_similarity_seq_blast.out'.format(rename, reprotein), shell = True)
+print("Alighned all sequences in BLAST and their HSP score saved in new file\n")
 
 #subprocess.call('makeblastdb -in {0}_{1}')
