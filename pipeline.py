@@ -4,7 +4,9 @@ import sys, subprocess, shutil, os
 import string, re
 import collections
 import numpy as np
-
+import matplotlib.pyplot as plt
+import pandas as pd
+from collections import OrderedDict
 
 def error_msg():
 	for i in range(20):
@@ -100,4 +102,17 @@ print("From all fasta sequences the program created database for blast alingment
 subprocess.call('blastp -db {0}_{1}_db -query {0}_{1}_consensus.fasta -outfmt 7 -max_hsps 1 > {0}_{1}_similarity_seq_blast.out'.format(rename, reprotein), shell = True)
 print("Alighned all sequences in BLAST and their HSP score saved in new file\n")
 
-#subprocess.call('makeblastdb -in {0}_{1}')
+blast_file = open("{0}_{1}_similarity_seq_blast.out".format(rename, reprotein)).read().rstrip('\n')
+access_hsp = {}
+data_lines = blast_file.split('\n')
+for lines in data_lines:
+	if re.search('#',lines):
+		next
+	else:
+		data_tab = lines.split('\t')
+		acc = data_tab[1]
+		hsp = data_tab[11]
+		access_hsp[acc] = hsp
+access_hsp_ord = {}
+access_hsp_ord=OrderedDict(sorted(access_hsp.items(), key=lambda value: value[1], reverse=True)[:250])
+
