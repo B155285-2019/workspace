@@ -142,6 +142,8 @@ fasta_file = open("{0}_{1}.fasta".format(rename, reprotein)).read().rstrip()
 inside_dir = os.getcwd()
 os.mkdir('{0}/fast_files'.format(inside_dir))
 os.chdir('{0}/fast_files'.format(inside_dir))
+pat_out = ('{0}/PATMOTIFS_OUT'.format(inside_dir))
+os.mkdir(pat_out)
 each_seq = fasta_file.split(">")
 for seq in each_seq:
 	for keys in access_hsp.keys():
@@ -149,4 +151,8 @@ for seq in each_seq:
 			sep_file = open("{0}.fasta".format(keys), "w")
 			sep_file.write(">"+seq)
 			sep_file.close()
+			subprocess.call("patmatmotifs -sequence {0}.fasta -outfile {1}/{0}.patmatmotifs -full".format(keys, pat_out), shell=True)
+#list_files = os.listdir()
+#for i in range(len(os.listdir())):
+#	subprocess.call("patmatmotifs -sequence {0} -outfile {1}/{2} -full".format(list_files[i], ))
 
