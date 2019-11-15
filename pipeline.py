@@ -134,12 +134,19 @@ subprocess.call('/localdisk/data/BPSM/Assignment2/pullseq -i {0}_{1}_aln.fasta -
 
 #insert window size for plotting
 subprocess.call('plotcon -sequence similar_aln_seq_250.fasta -winsize 60 -graph svg', shell=True)
-subprocess.call('eog plotcon.svg', shell = True)
+subprocess.call('eog plotcon.svg &', shell = True)
 
 
 #for calling my files I need to put accession numbers as a name for each files
 fasta_file = open("{0}_{1}.fasta".format(rename, reprotein)).read().rstrip()
+inside_dir = os.getcwd()
+os.mkdir('{0}/fast_files'.format(inside_dir))
+os.chdir('{0}/fast_files'.format(inside_dir))
 each_seq = fasta_file.split(">")
 for seq in each_seq:
-	if re.match(access_hsp.keys,seq)
-		print(access_hsp.)
+	for keys in access_hsp.keys():
+		if re.match(keys, seq):
+			sep_file = open("{0}.fasta".format(keys), "w")
+			sep_file.write(">"+seq)
+			sep_file.close()
+
