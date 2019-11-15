@@ -114,6 +114,7 @@ print("From all fasta sequences the program created database for blast alingment
 subprocess.call('blastp -db {0}_{1}_db -query {0}_{1}_consensus.fasta -outfmt 7 -max_hsps 1 > {0}_{1}_similarity_seq_blast.out'.format(rename, reprotein), shell = True)
 print("Alighned all sequences in BLAST and their HSP score saved in new file\n")
 
+#do it with pandas
 blast_file = open("{0}_{1}_similarity_seq_blast.out".format(rename, reprotein)).read().rstrip('\n')
 access_hsp = {}
 data_lines = blast_file.split('\n')
@@ -134,7 +135,7 @@ subprocess.call('/localdisk/data/BPSM/Assignment2/pullseq -i {0}_{1}_aln.fasta -
 
 #insert window size for plotting
 subprocess.call('plotcon -sequence similar_aln_seq_250.fasta -winsize 60 -graph svg', shell=True)
-subprocess.call('eog plotcon.svg &', shell = True)
+subprocess.call('eog plotcon.svg &', shell = True)    #'eog' used for presenting output to the screen and '&' sign used so that program continues its funtion further, while action of presenting figure taking place in the behind of main program
 
 
 #for calling my files I need to put accession numbers as a name for each files
@@ -144,6 +145,9 @@ os.mkdir('{0}/fast_files'.format(inside_dir))
 os.chdir('{0}/fast_files'.format(inside_dir))
 pat_out = ('{0}/PATMOTIFS_OUT'.format(inside_dir))
 os.mkdir(pat_out)
+found_motif = open('{0}/FOUND_MOTIFS.txt'.format(inside_dir),"w")
+found_motif.write("Accession number\tMotif name\n")
+motif_array = []
 each_seq = fasta_file.split(">")
 for seq in each_seq:
 	for keys in access_hsp.keys():
@@ -152,7 +156,19 @@ for seq in each_seq:
 			sep_file.write(">"+seq)
 			sep_file.close()
 			subprocess.call("patmatmotifs -sequence {0}.fasta -outfile {1}/{0}.patmatmotifs -full".format(keys, pat_out), shell=True)
-#list_files = os.listdir()
-#for i in range(len(os.listdir())):
-#	subprocess.call("patmatmotifs -sequence {0} -outfile {1}/{2} -full".format(list_files[i], ))
+			pat_file = open("{0}/{1}.patmatmotifs".format(pat_out, keys)).readlines()
+			for line in pat_file:			
+				if re.search('#',line):
+					next
+				elif re.search('Motif', line):
+					line.rstrip()
+					index = line.find("=")
+					motif = line[index+2:]
+					motif_array.append(motif)
+					found_motif.write('{0}\t{1}'.format(keys,motif))			
+found_motif.close()
+print("The output of all sequences' scanning for motifs from the PROSITE database are saved in the folder by name PATMOTIFS_OUT inside the  working directory\n")
+print("In subset of protein sequences {0} known motifs were associated with {1} protein sequences. In FOUND_MOTIFS.txt file you can find list of accesiion numbers with found motif names\n".format(len(set(motif_array)),len(motif_array)))
+print("Found MOTIF names are: ")
+print("\n".join(set(motif_array)))
 
