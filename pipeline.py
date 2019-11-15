@@ -8,7 +8,6 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from collections import OrderedDict
 
-
 my_ws = os.getcwd()
 def error_msg():
 	for i in range(20):
@@ -19,7 +18,6 @@ def error_msg():
 	print("\n")
 	return (0)
 		
-
 def check_valid(name):
 	count = subprocess.check_output('esearch -db protein -query "{0}" | xtract -pattern ENTREZ_DIRECT -element Count'.format(name),shell=True)
 	if int(count) == 0:
@@ -53,7 +51,6 @@ def get_input():
 		protein = str(input("Enter the valid protein name\n"))
 	return (name, protein)
 
-
 def begin():
 	name, protein = get_input()
 	while check_both_input(name, protein) != 1:
@@ -76,7 +73,6 @@ def begin():
 		return (reply, name, protein)
 	reply = input('Do you want to continue the process or change the input? yes/no\n').upper()
 	return (reply, name, protein)
-
 
 #def unique(list1): 
 #    unique_list = [] 
@@ -106,6 +102,8 @@ reprotein = protein.replace(" ","_")
 subprocess.call('esearch -db protein -query "{0}[prot]" -organism "{1}" | efetch -db protein -format fasta > {2}_{3}.fasta'.format(protein, name, rename, reprotein), shell=True)
 subprocess.call('clustalo -i {0}_{1}.fasta -o {0}_{1}_aln.fasta -v'.format(rename, reprotein), shell =True)
 print("Multiple Alignment for downloaded protein sequences is done")
+subprocess.call('showalign ')
+#S (Similarity to the reference sequence)
 subprocess.call('cons -sequence {0}_{1}_aln.fasta -outseq {0}_{1}_consensus.fasta -auto'.format(rename, reprotein), shell=True)
 print("Program has created a consensus sequence from a multiple alignment")
 
