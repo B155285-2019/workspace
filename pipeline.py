@@ -8,6 +8,8 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from collections import OrderedDict
 
+
+my_ws = os.getcwd()
 def error_msg():
 	for i in range(20):
 		print("==",end="")
@@ -25,7 +27,7 @@ def check_valid(name):
 	return 1
 
 def check_both_input(name,protein):
-        count = subprocess.check_output('esearch -db protein -query "{0}[prot] NOT PARTIAL" -organism "{1}" | xtract -pattern ENTREZ_DIRECT -element Count'.format(protein, name),shell=True)
+        count = subprocess.check_output('esearch -db protein -query "{0}[prot]" -organism "{1}" | xtract -pattern ENTREZ_DIRECT -element Count'.format(protein, name),shell=True)
         if int(count) == 0:
                 return 0
         return 1
@@ -60,13 +62,21 @@ def begin():
 		name, protein = get_input()
 	rename = name.replace(" ","_")
 	reprotein = protein.replace(" ","_")
-	subprocess.call('esearch -db protein -query "{0}[prot] NOT PARTIAL" -organism "{1}" | efetch -db protein -format docsum | xtract -pattern DocumentSummary -element Organism > {2}_{3}_organism_list.txt'.format(protein, name, rename,reprotein), shell=True)
+	os.mkdir('{0}/{1}_{2}'.format(my_ws,rename, reprotein))
+	os.chdir('{0}/{1}_{2}'.format(my_ws,rename, reprotein))
+	subprocess.call('esearch -db protein -query "{0}[prot]" -organism "{1}" | efetch -db protein -format docsum | xtract -pattern DocumentSummary -element Organism > {2}_{3}_organism_list.txt'.format(protein, name, rename,reprotein), shell=True)
 	my_list = open('{0}_{1}_organism_list.txt'.format(rename, reprotein)).readlines()
 	count = len(my_list)
 	species = len(set(my_list))
 	print('The search with your input resulted in '+str(count)+' sequences from '+str(species)+' species.\n')
+	if count >= 10000:
+		error_msg()
+		print("Allowable starting sequence set shouldn't be bigger than 10,000 sequences.\n")
+		reply = "BREAK"
+		return (reply, name, protein)
 	reply = input('Do you want to continue the process or change the input? yes/no\n').upper()
 	return (reply, name, protein)
+
 
 #def unique(list1): 
 #    unique_list = [] 
@@ -80,18 +90,20 @@ def begin():
 #      if not organism_dict.get(seq):
 #        seq.strip()
 #        organism[seq] = 1
+	
 reply, name, protein = begin()
 while not (re.search('[YES]|[Y]',reply)):
 	print("We are going back to the beginning!")
 	rename = name.replace(" ","_")
 	reprotein = protein.replace(" ","_")
-	os.remove("{0}_{1}_organism_list.txt".format(rename, reprotein))
+	os.chdir('{0}'.format(my_ws))
+	shutil.rmtree('{0}/{1}_{2}'.format(my_ws,rename, reprotein))
 	reply, name, protein = begin()
 	
 print("All sequences are being downloaded...")
 rename = name.replace(" ","_")
 reprotein = protein.replace(" ","_")
-subprocess.call('esearch -db protein -query "{0}[prot] NOT PARTIAL" -organism "{1}" | efetch -db protein -format fasta > {2}_{3}.fasta'.format(protein, name, rename, reprotein), shell=True)
+subprocess.call('esearch -db protein -query "{0}[prot]" -organism "{1}" | efetch -db protein -format fasta > {2}_{3}.fasta'.format(protein, name, rename, reprotein), shell=True)
 subprocess.call('clustalo -i {0}_{1}.fasta -o {0}_{1}_aln.fasta -v'.format(rename, reprotein), shell =True)
 print("Multiple Alignment for downloaded protein sequences is done")
 subprocess.call('cons -sequence {0}_{1}_aln.fasta -outseq {0}_{1}_consensus.fasta -auto'.format(rename, reprotein), shell=True)
@@ -115,4 +127,19 @@ for lines in data_lines:
 		access_hsp[acc] = hsp
 access_hsp_ord = {}
 access_hsp_ord=OrderedDict(sorted(access_hsp.items(), key=lambda value: value[1], reverse=True)[:250])
+acc_list_file = open("acc_filt_header.txt", "w")
+acc_list_file.write("\n".join(access_hsp_ord.keys()))
+acc_list_file.close()
+subprocess.call('/localdisk/data/BPSM/Assignment2/pullseq -i {0}_{1}_aln.fasta -n acc_filt_header.txt -v > similar_aln_seq_250.fasta'.format(rename, reprotein), shell=True)
 
+#insert window size for plotting
+subprocess.call('plotcon -sequence similar_aln_seq_250.fasta -winsize 60 -graph svg', shell=True)
+subprocess.call('eog plotcon.svg', shell = True)
+
+
+#for calling my files I need to put accession numbers as a name for each files
+fasta_file = open("{0}_{1}.fasta".format(rename, reprotein)).read().rstrip()
+each_seq = fasta_file.split(">")
+for seq in each_seq:
+	if re.match(access_hsp.keys,seq)
+		print(access_hsp.)
