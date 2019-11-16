@@ -8,13 +8,16 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from collections import OrderedDict
 
-my_ws = os.getcwd()
+my_ws = os.getcwd()     #to get the path of working space
+
+################################# FUNCTIONS ################################
 def error_msg():
+	print('\n')
 	for i in range(20):
-		print("==",end="")
+		print("**",end="")
 	print("ERROR", end="")
 	for i in range(20):
-		print("==", end="")
+		print("**", end="")
 	print("\n")
 	return (0)
 		
@@ -43,16 +46,15 @@ def check_input(name):
 	return 1
 
 def get_input():     
-	name = str(input("Please enter the taxonomic group name:\n"))
+	name = str(input("Please enter the taxonomic group name (No need for quotation!):\n"))
 	while check_input(name) != 1:
-		name = str(input("Enter the valid taxonomic group name:\n"))
+		name = str(input("Enter the valid taxonomic group name (No need for quotation):\n"))
 	protein = str(input("Please specify protein family name:\n"))
 	while check_input(protein) != 1:
 		protein = str(input("Enter the valid protein name\n"))
 	return (name, protein)
 
-def begin():
-	name, protein = get_input()
+def begin(name, protein):
 	while check_both_input(name, protein) != 1:
 		error_msg()
 		print("No data found with a taxonomic group name \""+name+"\" and protein family name \""+protein+"\" in database. Try one more time with the valid names!\n")
@@ -74,35 +76,35 @@ def begin():
 	reply = input('Do you want to continue the process or change the input? yes/no\n').upper()
 	return (reply, name, protein)
 
-#def unique(list1): 
-#    unique_list = [] 
-#    for x in list1: 
-#        if x not in unique_list: 
-#            unique_list.append(x) 
-#    print(len(unique_list)) 
+############################### START #######################################################
 
-#organism_dict = {}
-#    for seq in my_list:
-#      if not organism_dict.get(seq):
-#        seq.strip()
-#        organism[seq] = 1
+arguments = len(sys.argv) - 1    #taking out the program name
+if (arguments != 2):
+        error_msg()
+        print("You have to enter two arguments to run the program!Quote the Names which have spaces!\n")
+        sys.exit("Number of arguments are not valid! Program is exiting!\n")       #exiting the program until user enters two names for search
+
+name  = sys.argv[1]     #Please for inputs with spaces with quotation
+protein = sys.argv[2]
 	
-reply, name, protein = begin()
+reply, name, protein = begin(name, protein)
 while not (re.search('[YES]|[Y]',reply)):
 	print("We are going back to the beginning!")
 	rename = name.replace(" ","_")
 	reprotein = protein.replace(" ","_")
 	os.chdir('{0}'.format(my_ws))
 	shutil.rmtree('{0}/{1}_{2}'.format(my_ws,rename, reprotein))
-	reply, name, protein = begin()
-	
+	name, protein = get_input()
+	reply, name, protein = begin(name,protein)
+
+inside_dir = os.getcwd()	
 print("All sequences are being downloaded...")
 rename = name.replace(" ","_")
 reprotein = protein.replace(" ","_")
 subprocess.call('esearch -db protein -query "{0}[prot]" -organism "{1}" | efetch -db protein -format fasta > {2}_{3}.fasta'.format(protein, name, rename, reprotein), shell=True)
 subprocess.call('clustalo -i {0}_{1}.fasta -o {0}_{1}_aln.fasta -v'.format(rename, reprotein), shell =True)
 print("Multiple Alignment for downloaded protein sequences is done")
-subprocess.call('showalign ')
+#subprocess.call('showalign ')
 #S (Similarity to the reference sequence)
 subprocess.call('cons -sequence {0}_{1}_aln.fasta -outseq {0}_{1}_consensus.fasta -auto'.format(rename, reprotein), shell=True)
 print("Program has created a consensus sequence from a multiple alignment")
@@ -112,8 +114,7 @@ print("From all fasta sequences the program created database for blast alingment
 subprocess.call('blastp -db {0}_{1}_db -query {0}_{1}_consensus.fasta -outfmt 7 -max_hsps 1 > {0}_{1}_similarity_seq_blast.out'.format(rename, reprotein), shell = True)
 print("Alighned all sequences in BLAST and their HSP score saved in new file\n")
 
-#do it with pandas
-blast_file = open("{0}_{1}_similarity_seq_blast.out".format(rename, reprotein)).read().rstrip('\n')
+blast_file = open("{0}/{1}_{2}_similarity_seq_blast.out".format(inside_dir,rename, reprotein)).read().rstrip('\n')
 access_hsp = {}
 data_lines = blast_file.split('\n')
 for lines in data_lines:
@@ -133,12 +134,11 @@ subprocess.call('/localdisk/data/BPSM/Assignment2/pullseq -i {0}_{1}_aln.fasta -
 
 #insert window size for plotting
 subprocess.call('plotcon -sequence similar_aln_seq_250.fasta -winsize 60 -graph svg', shell=True)
-subprocess.call('eog plotcon.svg &', shell = True)    #'eog' used for presenting output to the screen and '&' sign used so that program continues its funtion further, while action of presenting figure taking place in the behind of main program
+subprocess.call('eog plotcon.svg&', shell = True)    #'eog' used for presenting output to the screen and '&' sign used so that program continues its funtion further, while action of presenting figure taking place in the behind of main program
 
 
 #for calling my files I need to put accession numbers as a name for each files
 fasta_file = open("{0}_{1}.fasta".format(rename, reprotein)).read().rstrip()
-inside_dir = os.getcwd()
 os.mkdir('{0}/fast_files'.format(inside_dir))
 os.chdir('{0}/fast_files'.format(inside_dir))
 pat_out = ('{0}/PATMOTIFS_OUT'.format(inside_dir))
