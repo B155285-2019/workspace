@@ -292,9 +292,9 @@ if (re.search('[YES]|[Y]',sec_confirm.upper())): #if yes then run the program
 print('\n')
 for i in range(20):        #twenty times print ##  before word, want no new line in the end, because need to print word
 	print("##",end="")
-	print("END", end="")      #then print word Progress without newline
-	for i in range(20):         #twenty times print ## after word
-		print("##", end="")
-	print("\n")     #newline in the end
+print("END", end="")      #then print word Progress without newline
+for i in range(20):         #twenty times print ## after word
+	print("##", end="")
+print("\n")     #newline in the end
 
 print('This is the end of the PROGRAM! Thank you for using! Hope to see you again\n')
