@@ -22,6 +22,17 @@ def error_msg():
 	print("\n")     #newline in the end          
 	return (0)     #function just returns 0
 
+
+def progress_msg():
+        print('\n')
+        for i in range(20):        #twenty times print ~~  before word, want no new line in the end, because need to print word
+                print("~~",end="")
+        print("PROGRESS", end="")      #then print word Progress without newline
+        for i in range(20):         #twenty times print ~~ after word
+                print("~~", end="")
+        print("\n")     #newline in the end
+        return (0)     #function just returns 0
+
 #in order to check if the input is valid name, I check that word in easearch and count the found data. This check separately done for both inputs		
 def check_valid(name):     #input is any name
 	#when you do esearch it print out ENTREZ_DIRECT, where you can find found data count, I try to save that value and check
@@ -86,13 +97,23 @@ def begin(name, protein):   #need organism and protein name
 	reply = input('Do you want to continue the process with this dataset? (Otherwise you can stop it and run again with other inputs) yes/no\n').upper()  #otherwise program asks if user is satisfied with found dataset
 	return (reply, name, protein)   #the user reply and organism and protein names transferred as output
 
+def plotcon(wind_size=10):
+	subprocess.call('plotcon -sequence similar_aln_seq_250.fasta -winsize {0} -graph svg'.format(wind_size), shell=True)
+	subprocess.call('eog plotcon.svg&', shell = True)    #'eog' used for presenting output to the screen and '&' sign used so that program continues its funtion further, while action of presenting figure taking place in the behind of main program
+
+
 ############################### START #######################################################
+#starting message
+for i in range(40):    
+	print('@@',end="")
+print('\n\n')
+print("PROGRAM IS STARTING TO RUN\n")
 
 arguments = len(sys.argv) - 1    #taking out the program name
 if (arguments != 2):      #to check if user inputted two names only
         error_msg()      #calling error printer function
         print("You have to enter two arguments to run the program!Quote the Names which have spaces!\n")
-        sys.exit("Number of arguments are not valid! Program is exiting!\n")       #exiting the program until user enters two names for search
+        sys.exit("Number of arguments are not valid! Please read the manual carefully! Program is exiting!\n")       #exiting the program until user enters two names for search
 
 name  = sys.argv[1]     #fisrt argument after the program name is taxonomic group name
 protein = sys.argv[2]	#second argument after the program name is protein name
@@ -109,6 +130,9 @@ while not (re.search('[YES]|[Y]',reply)):      #if the user reply is other then 
 
 #Okay now starting to Download fasta files
 inside_dir = os.getcwd()	 #setting path of the folder with tax_group and protein name
+result_dir = ("{0}/RESULTS".format(inside_dir))     #all significant results will be saved in new folder called RESULTS
+os.mkdir(result_dir)
+progress_msg()
 print("All sequences are being downloaded...")      
 rename = name.replace(" ","_")    #Since we dont return renamed names from previous functions, here we are doing it again
 reprotein = protein.replace(" ","_")    #replacing spaces with underscores
@@ -116,115 +140,161 @@ reprotein = protein.replace(" ","_")    #replacing spaces with underscores
 subprocess.call('esearch -db protein -query "{0}[prot]" -organism "{1}" | efetch -db protein -format fasta > {2}_{3}.fasta'.format(protein, name, rename, reprotein), shell=True)    
 #using clustalo to align all sequences
 subprocess.call('clustalo -i {0}_{1}.fasta -o {0}_{1}_aln.fasta -v'.format(rename, reprotein), shell =True)
-print("Multiple Alignment for downloaded protein sequences is done")
+progress_msg()
+print("Multiple Alignment for downloaded protein sequences is done\n")
 
 #Asking user if want to see the alignment result in pretty format
 show_al = str(input("Do you want to visualize alignment results in pretty format? (y/n)\n"))
-if (re.search('[YES]|[Y]',show_al)):    #for positive results we run prettyplot functin for aligned sequences
-	subprocess.call('prettyplot -residuesperline=70 -boxcol -consensus -ratio=0.59 -docolour -sequence {0}_{1}_aln.fasta -graph svg'.format(rename,reprotein),shell=True)        #in each line wanted to 70 residues and, respresent residues and backgrounds in colors, for consensus match used 0.59 as pluraity ratio
-	print("Emboss Prettyplot function used to draw the aligned sequences with pretty formating!\n")	
-	subprocess.call('firefox prettyplot.svg&')   #need to open output in firefox since plot is large
-
+if (re.search('[YES]|[Y]',show_al.upper())):    #for positive results we run prettyplot functin for aligned sequences
+	os.chdir(result_dir)  #in order to save plot output changing to RESULT folder
+	subprocess.call('prettyplot -residuesperline=70 -boxcol -consensus -ratio=0.59 -docolour -sequence {0}/{1}_{2}_aln.fasta -graph svg'.format(inside_dir,rename,reprotein),shell=True)        #in each line wanted to 70 residues and, respresent residues and backgrounds in colors, for consensus match used 0.59 as pluraity ratio
+	progress_msg()
+	print("Program is drawing the aligned sequences with pretty formating!\n")	
+	subprocess.call('firefox {0}/prettyplot.svg&'.format(result_dir), shell=True)   #need to open output in firefox since plot is large
+	os.chdir(inside_dir)
 
 #For conservation plotting we are using the most similar 250 sequences from dataset
 #Running cons function from Emboss to create the consensus sequence from multiple alignment 
 subprocess.call('cons -plurality 0.59 -sequence {0}_{1}_aln.fasta -outseq {0}_{1}_consensus.fasta -auto'.format(rename, reprotein), shell=True)   #used same prularity as for pretty plot in order to have same consensus sequence and it should ne a bit more than half of the total sequence weighting 0.59
-print("Program has created a consensus sequence from a multiple alignment")
+progress_msg()
+print("Program has created a consensus sequence from a multiple alignment\n")
 
 #We can get most similar sequences by running the blastp
 #before running we are creating a database from all sequences
 subprocess.call('makeblastdb -in {0}_{1}.fasta -dbtype prot -out {0}_{1}_db'.format(rename, reprotein), shell=True)
+progress_msg()
 print("From all fasta sequences the program created database for blast alingment\n")
-#After running the blast programgram with database and created consensus sequence
+#After, we are running the blast program with database and created consensus sequence
 subprocess.call('blastp -db {0}_{1}_db -query {0}_{1}_consensus.fasta -outfmt 7 -max_hsps 1 > {0}_{1}_similarity_seq_blast.out'.format(rename, reprotein), shell = True)   #outformat wanted with tabs and comments, per each query and subject sequences we want only one HSPs 
+progress_msg()
 print("Alighned all sequences in BLAST and their HSP score saved in new file\n")
 
+#opening the output of the blast file
 blast_file = open("{0}/{1}_{2}_similarity_seq_blast.out".format(inside_dir,rename, reprotein)).read().rstrip('\n')
-access_hsp = {}
-data_lines = blast_file.split('\n')
-for lines in data_lines:
-	if re.search('#',lines):
+access_hsp = {}    #settyng empty dictionary
+data_lines = blast_file.split('\n')  #splitting file into lines 
+for lines in data_lines:            #for each line
+	if re.search('#',lines):     # if comment skip the line
 		next
 	else:
-		data_tab = lines.split('\t')
-		acc = data_tab[1]
-		hsp = data_tab[11]
-		access_hsp[acc] = hsp
-access_hsp_ord = {}
+		data_tab = lines.split('\t')      #split the line columns by tab-separator
+		acc = data_tab[1]                 #second column is accession numbers, we are saving into value
+		hsp = data_tab[11]        #last column is HSP scores
+		access_hsp[acc] = hsp     #for each accession numbers saving the score into dictionary
+access_hsp_ord = {}         #will save the ordered 250 most similar accession numbers and score in different dictionary
+#reversely, in descending order [until 250] sorting values of the dictionary and saving to new dict
 access_hsp_ord=OrderedDict(sorted(access_hsp.items(), key=lambda value: value[1], reverse=True)[:250])
-acc_list_file = open("acc_filt_header.txt", "w")
-acc_list_file.write("\n".join(access_hsp_ord.keys()))
-acc_list_file.close()
-subprocess.call('/localdisk/data/BPSM/Assignment2/pullseq -i {0}_{1}_aln.fasta -n acc_filt_header.txt -v > similar_aln_seq_250.fasta'.format(rename, reprotein), shell=True)
+acc_list_file = open("acc_filt_header.txt", "w")   #opening new file to save the output of the sorted 250 sequence accession number
+acc_list_file.write("\n".join(access_hsp_ord.keys())) #ordered keys written by new line to the new file
+acc_list_file.close()  #closing file
+#created file with 250 accession numbers used to pull matching sequeces from single long fasta file
+#here using the pullseq program which located in Assignment2 file in BPSM directory
+subprocess.call('/localdisk/data/BPSM/Assignment2/pullseq -i {0}_{1}_aln.fasta -n acc_filt_header.txt -v > similar_aln_seq_250.fasta'.format(rename, reprotein), shell=True) #to give extra details during run used flag -v
 
 #insert window size for plotting
-subprocess.call('plotcon -sequence similar_aln_seq_250.fasta -winsize 60 -graph svg', shell=True)
-subprocess.call('eog plotcon.svg&', shell = True)    #'eog' used for presenting output to the screen and '&' sign used so that program continues its funtion further, while action of presenting figure taking place in the behind of main program
+wind_size = str(input("Please enter the WINDOW size for plotting the level of conservation: (any integer) \n"))
+wind_valid = re.compile("[0-9]+")   #checking if user eneter only digits
+if wind_valid.fullmatch(wind_size) == None:     #if not then set default value 
+	wind_size = 10
+	print("Invalid window size, we will use default size (10)!\n")     
 
+#plotting the conservation level of most similar sequences using EMBOSS plotcon function
+os.chdir(result_dir)
+subprocess.call('plotcon -sequence {0}/similar_aln_seq_250.fasta -winsize {1} -graph svg'.format(inside_dir,wind_size), shell=True)   
+subprocess.call('eog {0}/plotcon.svg&'.format(result_dir), shell = True)    #'eog' used for presenting output to the screen and '&' sign used so that program continues its funtion further, while action of presenting figure taking place in the behind of main program
+os.chdir(inside_dir)
+progress_msg()
+print("Plotcon result went to the screen!\n")
 
 #for calling my files I need to put accession numbers as a name for each files
-fasta_all = open("{0}_{1}.fasta".format(rename, reprotein)).read().rstrip()
-os.mkdir('{0}/FASTA_FILES'.format(inside_dir))
-os.chdir('{0}/FASTA_FILES'.format(inside_dir))
-pat_out = ('{0}/PATMOTIFS_OUT'.format(inside_dir))
+fasta_all = open("{0}_{1}.fasta".format(rename, reprotein)).read().rstrip()   #open single fasta file 
+os.mkdir('{0}/FASTA_FILES'.format(inside_dir)) 			#making directory for each separate fasta files
+os.chdir('{0}/FASTA_FILES'.format(inside_dir))			#moving to new directory place
+pat_out = ('{0}/PATMOTIFS_OUT'.format(inside_dir))		#for PATMOTIFS program also creating new directory
 os.mkdir(pat_out)
-found_motif = open('{0}/FOUND_MOTIFS.txt'.format(inside_dir),"w")
-found_motif.write("Accession number\tMotif name\n")
-motif_array = []
-each_seq = fasta_all.split(">")
-for seq in each_seq:
-	for keys in access_hsp.keys():
-		if re.match(keys, seq):
-			sep_file = open("{0}.fasta".format(keys), "w")
-			sep_file.write(">"+seq)
-			sep_file.close()
-			subprocess.call("patmatmotifs -sequence {0}.fasta -outfile {1}/{0}.patmatmotifs -full".format(keys, pat_out), shell=True)
-			pat_file = open("{0}/{1}.patmatmotifs".format(pat_out, keys)).readlines()
-			for line in pat_file:
-				if re.search('#',line):
+found_motif = open('{0}/FOUND_MOTIFS.txt'.format(result_dir),"w")  #creating file to save found MOTIF information	
+found_motif.write("Accession number\tMotif name\n")		 #The header of the file will print names of columns
+motif_array = []   	 #empty array
+each_seq = fasta_all.split(">") 	#spliting all fasta files by char >
+for seq in each_seq:			#for each sequence in fasta file
+	for keys in access_hsp.keys():	 #for each accession number in dictionaries from blast output
+		if re.match(keys, seq):	  #checking for match in order to tag each sequence with accession number
+			sep_file = open("{0}.fasta".format(keys), "w")	#tagged accesion numbers will be used to name each file for sequence
+			sep_file.write(">"+seq)				#after creating file we write seqences into file, while splittin char '>' disappeared, I am putting it back 
+			sep_file.close()	#after writing closing the file
+			#each written sequence file used to run PATMATMOTIFS from EMboss to scan the protein sequence for known motifs
+			subprocess.call("patmatmotifs -sequence {0}.fasta -outfile {1}/{0}.patmatmotifs -full".format(keys, pat_out), shell=True) #used -full flag to run for whole sequence
+			pat_file = open("{0}/{1}.patmatmotifs".format(pat_out, keys)).readlines() #after we run the patmotif we open output to check for motif
+			for line in pat_file:		#through each lines
+				if re.search('#',line):		#skipping comments
 					next
-				elif re.search('Motif', line):
-					line.rstrip()
-					index = line.find("=")
-					motif = line[index+2:]
-					motif_array.append(motif)
-					found_motif.write('{0}\t{1}'.format(keys,motif))
-found_motif.close()
+				elif re.search('Motif', line):	     #searching for line where Motif word used
+					line.rstrip()	             #cutting new line from the end of line, in order to not to get in my match	
+					index = line.find("=")       #motif name is after the sign '=', that's why I want to get index of this sign 
+					motif = line[index+2:]	     #getting name of the Motif after '= ' and space, so I add 2 
+					motif_array.append(motif)    #saving found motif names into array		
+					found_motif.write('{0}\t{1}'.format(keys,motif))  #samely, writing into the file together with accession number
+found_motif.close()    #after writing to file need to close
+os.chdir(inside_dir)  #after change of folders coming back to working space
+progress_msg()
 print("The output of all sequences' scanning for motifs from the PROSITE database are saved in the folder by name PATMOTIFS_OUT inside the  working directory\n")
-print("In subset of protein sequences {0} known motifs were associated with {1} protein sequences. In FOUND_MOTIFS.txt file you can find list of accesiion numbers with found motif names\n".format(len(set(motif_array)),len(motif_array)))
+print("In subset of protein sequences {1} known motifs were found associated and unique motif is {0}. In FOUND_MOTIFS.txt file you can find list of accession numbers with found motif names. Repeated name means that protein sequence has more than one times the same motif.\n".format(len(set(motif_array)),len(motif_array)))
 print("Found MOTIF names are: ")
+#found Motif information is presented to user
 print("\n".join(set(motif_array)))
 
-fasta_files = os.listdir()
-sec_str = ('{0}/Secondary_STRUCT'.format(inside_dir))
-os.mkdir(sec_str)
-H = {}
-E = {}
-T = {}
-C = {}
-for item in fasta_files:
-	reitem = item.replace(".fasta","_fasta")
-	subprocess.call("garnier -sequence {0} -outfile {1}/{2}.garnier".format(item,sec_str,reitem), shell=True)
-second_files = os.listdir('{0}'.format(sec_str))
-for item in second_files:
-	keys = item.replace("_fasta.garnier","")
-	sec_file = open("{0}/{1}".format(sec_str,item)).read().rstrip()
-	m = re.search(r"percent: H: (\d+.\d+) E: (\d+.\d+) T: (\d+.\d+) C: (\d+.\d+)",sec_file)
-	H[keys] = m.group(1)
-	E[keys] = m.group(2)
-	T[keys] = m.group(3)
-	C[keys] = m.group(4)
+#asking if user want to analyze the secondary structure of the protein sequences
 
-table = open("{0}/Secondary_struct_percent_table.txt".format(inside_dir), "w")
-table.write("Accession numbers\tHelix %\tSheet %\tTurns %\tcoils %\n")
-for key in H.keys():
-        table.write("{0}\t{1}\t{2}\t{3}\t{4}\n".format(key,H[key],E[key],T[key],C[key]))
-table.close()
+sec_confirm = str(input("Do you analyze the Secondary srtucture of the protein sequences? Percentege of the secondary structure will be presented (y/n)\n"))
+if (re.search('[YES]|[Y]',sec_confirm.upper())): #if yes then run the program
+	sec_str = ('{0}/Secondary_STRUCT'.format(inside_dir))  #for Secondary structure output creating new directory 
+	os.mkdir(sec_str)
+	H = {}      #empty dictionaries for each structure form Helix
+	E = {}		#Sheet
+	T = {}		#Turns
+	C = {}		#Coils
+	for keys in access_hsp.keys():	#for each fasta files
+		#running Emboss garnier function for each sequence to predict the secondary structure
+		subprocess.call("garnier -sequence {0}/FASTA_FILES/{1}.fasta -outfile {2}/{1}.garnier".format(inside_dir,keys,sec_str), shell=True)
+	second_files = os.listdir('{0}'.format(sec_str))  #all output files saved into one list 
+	for item in second_files:		#for each file name in Secondary_STRUCT folder
+		keys = item.replace(".garnier","")    #first get only accession numbers by cutting the end part of the name
+		sec_file = open("{0}/{1}".format(sec_str,item)).read().rstrip()    #open each file to read
+		#from file look for line where The percentage for each structure represented
+		m = re.search(r"percent: H: (\d+.\d+) E: (\d+.\d+) T: (\d+.\d+) C: (\d+.\d+)",sec_file) 
+		#each matched percentage value saved according to their Structure names in separate dictionaries by their accession number		  
+		H[keys] = m.group(1)
+		E[keys] = m.group(2)
+		T[keys] = m.group(3)
+		C[keys] = m.group(4)
+	#making new text file to write the statistics of the each struct
+	progress_msg()
+	print("For all fasta files Program predicted the secondary structures\n")
+	table = open("{0}/Secondary_struct_percent_table.txt".format(result_dir), "w")  
+	#writing the header line for file
+	table.write("Accession numbers\tHelix %\tSheet %\tTurns %\tcoils %\n")
+	#for each accession number writing each dictionary value by tab-separator 
+	for key in H.keys():
+       		table.write("{0}\t{1}\t{2}\t{3}\t{4}\n".format(key,H[key],E[key],T[key],C[key]))
+	table.close()  
+	print("The statistical summary about second structure for each sequence saved in RESULTS folder\n")
 
-S = pd.read_csv("{0}/Secondary_struct_percent_table.txt".format(inside_dir), sep = "\t")
-S.plot(figsize=(12,12))
-plt.xlabel('Sequence numbers')
-plt.ylabel('Percentage')
-plt.title('Secondary structure Residue Percentage in Protein sequence dataset')
-plt.savefig("{0}/Secondary_struct_profile_plot.png".format(inside_dir), transparent=True)
-plt.show()
+	#reading as a dataframe the table that contains percentages of for each sequences
+	S = pd.read_csv("{0}/Secondary_struct_percent_table.txt".format(result_dir), sep = "\t") 
+	S.plot(figsize=(12,12))    #plotting the datafram by setting the figure size
+	plt.xlabel('Sequence numbers')    #name of x axis
+	plt.ylabel('Percentage')	 #name for y axis
+	plt.title('Secondary structure Residue Percentage in Protein sequence dataset')  #title of the graph
+	plt.savefig("{0}/Secondary_struct_profile_plot.png".format(result_dir), transparent=True)  #saving the figure in the Result folder
+	plt.show()   #putting image out
+
+
+print('\n')
+for i in range(20):        #twenty times print ##  before word, want no new line in the end, because need to print word
+	print("##",end="")
+	print("END", end="")      #then print word Progress without newline
+	for i in range(20):         #twenty times print ## after word
+		print("##", end="")
+	print("\n")     #newline in the end
+
+print('This is the end of the PROGRAM! Thank you for using! Hope to see you again\n')
