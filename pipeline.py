@@ -181,7 +181,6 @@ for item in fasta_files:
 	reitem = item.replace(".fasta","_fasta")
 	subprocess.call("garnier -sequence {0} -outfile {1}/{2}.garnier".format(item,sec_str,reitem), shell=True)
 second_files = os.listdir('{0}'.format(sec_str))
-print(second_files)
 for item in second_files:
 	keys = item.replace("_fasta.garnier","")
 	sec_file = open("{0}/{1}".format(sec_str,item)).read().rstrip()
@@ -191,8 +190,16 @@ for item in second_files:
 	T[keys] = m.group(3)
 	C[keys] = m.group(4)
 
-S = pd.DataFrame([H,E,T,C])
-S.plot.barh()
+table = open("{0}/Secondary_struct_percent_table.txt".format(inside_dir), "w")
+table.write("Accession numbers\tHelix %\tSheet %\tTurns %\tcoils %\n")
+for key in H.keys():
+        table.write("{0}\t{1}\t{2}\t{3}\t{4}\n".format(key,H[key],E[key],T[key],C[key]))
+table.close()
+
+S = pd.read_csv("{0}/Secondary_struct_percent_table.txt".format(inside_dir), sep = "\t")
+S.plot(figsize=(12,12))
+plt.xlabel('Sequence numbers')
+plt.ylabel('Percentage')
+plt.title('Secondary structure Residue Percentage in Protein sequence dataset')
+plt.savefig("{0}/Secondary_struct_profile_plot.png".format(inside_dir), transparent=True)
 plt.show()
-print(S)
-#S.to_csv("secondary.txt", sep="\t")
