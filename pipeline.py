@@ -54,7 +54,7 @@ def check_input(name):       #as an input we need one name
 	valid = re.compile("[A-Za-z0-9- ]+")       #valid names can contain Upper or lower letters and numbers and space and dashes
 	if name.isdigit() == True or valid.fullmatch(name) == None or re.search(r'^[\s\n\t]', name):      #error if there is only numbers or other special charaters or starts with sapce or tabs
 		error_msg()     #calling error messaging  printing function
-		print("The name "+name+" is invalid. Special characters, Only numbers, Whitespaces starts strongly restricted!\n")   #Explaining error for wrong input
+		print("The name "+name+" is invalid. Special characters, Only numbers, Whitespaces in the begining strongly restricted!\n")   #Explaining error for wrong input
 		return 0     	#after finding error stops funciton and returns 0
 	if check_valid(name) != 1:       #after checking for syntaxes, we call function which checks for esearch for valid data for that name, if it's not 1 then means count is 0
 		error_msg()    #printing error msg          
@@ -74,6 +74,10 @@ def get_input():
 
 #before downloading all datas we run esearch with valid names and count all sequences and species after ask user if this what s/he wants
 def begin(name, protein):   #need organism and protein name
+	while check_input(name) != 1: #until we dont get right input we call for function that checks syntax and in esearch combined
+		name = str(input("Enter the valid taxonomic group name (No need for quotation):\n")) #if every input is wrong ask again for right input
+	while check_input(protein) != 1:          #until we dont get right input we call for function that checks syntax and in esearch combined
+		protein = str(input("Enter the valid protein name\n"))    #if every input is wrong ask again for right input
 	while check_both_input(name, protein) != 1:   #calling the function which ckeck for both names in esearch, until there is data for both input
 		error_msg()		#calling function to print Error
 		#Explaining the error message
@@ -89,6 +93,11 @@ def begin(name, protein):   #need organism and protein name
 	count = len(my_list)    #length of read lines is organism numbers found
 	species = len(set(my_list))  #founding unique in that list is for finding the number of species
 	print('The search with your input resulted in '+str(count)+' sequences from '+str(species)+' species.\n')  #Telling the user about how many species are represented in the dataset chosen by user 
+	if count <= 2:    #this program does not allow to use the dataset with more than 10,000 sequences
+		error_msg()    #calling Error printer function
+		print("Program will not for for less than 2 sequences!\n")
+		reply = "BREAK"     #in this error case the function will return as BREAK
+		return (reply, name, protein)    #it does not continue the program returns values
 	if count >= 10000:    #this program does not allow to use the dataset with more than 10,000 sequences
 		error_msg()    #calling Error printer function
 		print("Allowable starting sequence set shouldn't be bigger than 10,000 sequences.\n")  
@@ -204,7 +213,7 @@ subprocess.call('plotcon -sequence {0}/similar_aln_seq_250.fasta -winsize {1} -g
 subprocess.call('eog {0}/plotcon.svg&'.format(result_dir), shell = True)    #'eog' used for presenting output to the screen and '&' sign used so that program continues its funtion further, while action of presenting figure taking place in the behind of main program
 os.chdir(inside_dir)
 progress_msg()
-print("Plotcon result went to the screen!\n")
+print("Plotcon result went to the screen and saved in RESULTS folder!\n")
 
 #for calling my files I need to put accession numbers as a name for each files
 fasta_all = open("{0}_{1}.fasta".format(rename, reprotein)).read().rstrip()   #open single fasta file 
@@ -219,6 +228,8 @@ each_seq = fasta_all.split(">") 	#spliting all fasta files by char >
 for seq in each_seq:			#for each sequence in fasta file
 	for keys in access_hsp.keys():	 #for each accession number in dictionaries from blast output
 		if re.match(keys, seq):	  #checking for match in order to tag each sequence with accession number
+			if re.search('|', keys):  #strange symbols in accession numbers are replaced by space while creating file
+				keys = keys.replace("|","_")
 			sep_file = open("{0}.fasta".format(keys), "w")	#tagged accesion numbers will be used to name each file for sequence
 			sep_file.write(">"+seq)				#after creating file we write seqences into file, while splittin char '>' disappeared, I am putting it back 
 			sep_file.close()	#after writing closing the file
@@ -254,6 +265,8 @@ if (re.search('[YES]|[Y]',sec_confirm.upper())): #if yes then run the program
 	T = {}		#Turns
 	C = {}		#Coils
 	for keys in access_hsp.keys():	#for each fasta files
+		if re.search('|', keys):
+			keys = keys.replace("|","_")
 		#running Emboss garnier function for each sequence to predict the secondary structure
 		subprocess.call("garnier -sequence {0}/FASTA_FILES/{1}.fasta -outfile {2}/{1}.garnier".format(inside_dir,keys,sec_str), shell=True)
 	second_files = os.listdir('{0}'.format(sec_str))  #all output files saved into one list 
@@ -261,7 +274,7 @@ if (re.search('[YES]|[Y]',sec_confirm.upper())): #if yes then run the program
 		keys = item.replace(".garnier","")    #first get only accession numbers by cutting the end part of the name
 		sec_file = open("{0}/{1}".format(sec_str,item)).read().rstrip()    #open each file to read
 		#from file look for line where The percentage for each structure represented
-		m = re.search(r"percent: H: (\d+.\d+) E: (\d+.\d+) T: (\d+.\d+) C: (\d+.\d+)",sec_file) 
+		m = re.search(r"percent: H: (-?\d+.\d+) E: (-?\d+.\d+) T: (-?\d+.\d+) C: (-?\d+.\d+)",sec_file) 
 		#each matched percentage value saved according to their Structure names in separate dictionaries by their accession number		  
 		H[keys] = m.group(1)
 		E[keys] = m.group(2)
@@ -284,7 +297,7 @@ if (re.search('[YES]|[Y]',sec_confirm.upper())): #if yes then run the program
 	S.plot(figsize=(12,12))    #plotting the datafram by setting the figure size
 	plt.xlabel('Sequence numbers')    #name of x axis
 	plt.ylabel('Percentage')	 #name for y axis
-	plt.title('Secondary structure Residue Percentage in Protein sequence dataset')  #title of the graph
+	plt.title('Secondary structural elements distribution in Protein sequence dataset')  #title of the graph
 	plt.savefig("{0}/Secondary_struct_profile_plot.png".format(result_dir), transparent=True)  #saving the figure in the Result folder
 	plt.show()   #putting image out
 
